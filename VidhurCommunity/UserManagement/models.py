@@ -7,6 +7,13 @@ from django.utils.translation import gettext_lazy as _
 
 from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
+from rest_framework_simplejwt.tokens import RefreshToken
+
+GenderChoice = (
+        ( 0, 'Male'),
+        ( 1, 'Fe-Male'),
+        ( 2, 'Other'),
+    )
 
 class CustomUserManager(BaseUserManager):
 
@@ -36,7 +43,9 @@ class CustomUserManager(BaseUserManager):
         """
         return self.get_queryset().filter(is_active=True)
 
- 
+
+
+
 
 class Users(AbstractUser, PermissionsMixin):
 
@@ -51,6 +60,8 @@ class Users(AbstractUser, PermissionsMixin):
     first_name = models.CharField(max_length=150, blank=False)
     last_name = models.CharField(max_length=150, blank=False)
     email = models.EmailField(max_length=255, blank=False, unique=True)
+    phone = models.CharField(max_length=20, null=True,blank=True)
+    gender = models.SmallIntegerField(choices=GenderChoice, null=True, blank=False, default=0, )
     is_staff = models.BooleanField(
         default=False,
         help_text=_("Designates whether the user can log into this admin site.")
@@ -61,6 +72,14 @@ class Users(AbstractUser, PermissionsMixin):
             "Designates whether this user should be treated as active. "
             "Unselect this instead of deleting accounts."
         ),
+    )
+    is_phone_verified = models.BooleanField(
+        default=False,
+        help_text=_("Designates whether otp is validated while user creation.")
+    )
+    is_email_verified = models.BooleanField(
+        default=False,
+        help_text=_("Designates whether Email is validated while user creation.")
     )
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
@@ -79,6 +98,15 @@ class Users(AbstractUser, PermissionsMixin):
         if not self.username:
             self.username = self.email
         super().save(*args, **kwargs)
+    
+    def get_tokens_for_user(self):
+
+        token = RefreshToken.for_user(self)
+
+        return {
+                    'refresh': str(token),
+                    'access': str(token.access_token),
+               }
 
     class Meta:
         verbose_name = "User"
